@@ -161,3 +161,26 @@ print(p_county)
 ggsave("ACE_by_county_boxplot.png", p_county, width = 11, height = 6, dpi = 300)
 
 cat("\nSaved ACE_overall_boxplot.png and ACE_by_county_boxplot.png\n")
+
+# ---- Metadata export ----------------------------------------------------
+anova_ACE <- anova(final_model)
+
+ACE_meta <- as.data.frame(emm_ACE_table) %>%
+  dplyr::rename(Mean = if ("response" %in% names(emm_ACE_table)) "response" else "emmean") %>%
+  dplyr::left_join(
+    as.data.frame(cld_ACE) %>% dplyr::select(Type, CLD = .group),
+    by = "Type"
+  ) %>%
+  mutate(
+    Metric         = "ACE",
+    Scale          = if (use_log) "log" else "raw",
+    Shapiro_raw_p  = signif(shapiro_raw$p.value, 3),
+    Shapiro_log_p  = signif(shapiro_log$p.value, 3),
+    LMM_F          = round(anova_ACE$`F value`[1], 3),
+    LMM_p          = signif(anova_ACE$`Pr(>F)`[1], 3)
+  ) %>%
+  dplyr::select(Metric, Scale, Shapiro_raw_p, Shapiro_log_p,
+                LMM_F, LMM_p, Type, Mean, CLD)
+
+write.csv(ACE_meta, "ACE_metadata.csv", row.names = FALSE)
+cat("Saved ACE_metadata.csv\n")
