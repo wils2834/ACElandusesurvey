@@ -1,0 +1,6 @@
+"Metric","Scale","Shapiro_raw_p","Shapiro_log_p","LMM_F","LMM_p","Type","Mean","CLD"
+"ACE","log",1.32e-07,0.0146,3.222,0.0283,"Conventional",5.69963878578403," a "
+"ACE","log",1.32e-07,0.0146,3.222,0.0283,"Soil_Health",6.3159571201576," ab"
+"ACE","log",1.32e-07,0.0146,3.222,0.0283,"Rotational_Grazing",7.50819539908073,"  b"
+"ACE","log",1.32e-07,0.0146,3.222,0.0283,"New_CRP",5.94672708634599," ab"
+"ACE","log",1.32e-07,0.0146,3.222,0.0283,"Old_CRP",6.12351942458039," ab"
