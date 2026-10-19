@@ -1,4 +1,4 @@
-# DRACE 2024 — ACE (Autoclaved Citrate Extractable) Protein
+# DRACE 2024  ACE (Autoclaved Citrate Extractable) Protein
 library(readxl)
 library(dplyr)
 library(lme4)
@@ -6,11 +6,11 @@ library(lmerTest)
 library(emmeans)
 library(multcomp) 
 library(ggplot2)
-# PART 1 — Import and clean
+# PART 1 Import and clean
 drace24 <- read_excel("C:\\Users\\swils\\Downloads\\01 Projects\\2024 CRP\\2024DRACE_03042025\\AllplatesDRACE2024.xlsx", sheet = "raw_data")
 colnames(drace24) <- make.names(colnames(drace24), unique = TRUE)
 
-# Drop plate-calibration standards — not field samples.
+# Drop plate-calibration standards- not field samples.
 drace24 <- drace24 %>%
   filter(!Type %in% c("Standard", "Standard 2", "Standard 3", "Standard 4"))
 
@@ -23,7 +23,7 @@ drace24$Type <- factor(
   drace24$Type,
   levels = c("Conventional", "Soil_Health", "Rotational_Grazing", "New_CRP", "Old_CRP")
 )
-# True field ID (see header note) — use this for all random effects.
+# True field ID (see header note) use this for all random effects.
 drace24 <- drace24 %>%
   mutate(Field = paste(Farmer, Type, sep = "_"))
 
@@ -33,7 +33,7 @@ cat("Distinct fields:", n_distinct(drace24$Field), "(expect 31)\n")
 cat("Distinct sample locations (UID):", n_distinct(drace24$UID), "\n\n")
 stopifnot(n_distinct(drace24$Field) == 31)
 
-# PART 2 — Mixed model
+# PART 2  Mixed model
 #Fit raw- and log-scale models, keep whichever gives better-behaved
 # (more normal) residuals rather than assuming log is always right.
 model_ACE     <- lmer(Avg_runs ~ Type + (1 | Field), data = drace24)
@@ -70,12 +70,7 @@ ACE_summary <- as.data.frame(emm_ACE_table) %>%
 
 print(ACE_summary)
 
-## ----------------------------------------------------------------------
-## PART 3 — Plots
-## CLD letters come from the mixed model above, so the plot and the
-## stats behind it actually agree (the original script's boxplots used
-## a separate, pseudoreplicated ANOVA for the letters).
-## ----------------------------------------------------------------------
+# PART 3 Plots
 
 type_labels <- c(
   "Conventional"        = "Conventional Cropping & Tillage",
@@ -93,7 +88,7 @@ fill_colors <- c(
   "Old_CRP"             = "#0072B2"
 )
 
-# --- Overall boxplot ---
+#  Overall boxplot
 label_positions <- drace24 %>%
   group_by(Type) %>%
   summarise(y_pos = max(Avg_runs, na.rm = TRUE) * 1.05, .groups = "drop") %>%
@@ -125,9 +120,7 @@ p_overall <- ggplot(drace24, aes(x = Type, y = Avg_runs, fill = Type)) +
 print(p_overall)
 ggsave("ACE_overall_boxplot.png", p_overall, width = 9, height = 6, dpi = 300)
 
-# --- Faceted by county ---
-# Letters are identical across both facets because they come from the
-# single overall model (pooled across counties), not a per-county test.
+#  Faceted by county 
 label_positions_county <- drace24 %>%
   group_by(County, Type) %>%
   summarise(y_pos = max(Avg_runs, na.rm = TRUE) * 1.05, .groups = "drop") %>%
@@ -188,19 +181,17 @@ ACE_meta <- as.data.frame(emm_ACE_table) %>%
 write.csv(ACE_meta, "ACE_metadata.csv", row.names = FALSE)
 cat("Saved ACE_metadata.csv\n")
 
-#  PART 4 — Indexed (continuous management score) version
+#  PART 4  Indexed (continuous management score) version
 
 library(MuMIn)
 
-# ---- Load pre-computed scores and correct stale RG/CRP values -----------
+# Load pre-computed scores and correct stale RG/CRP values
 
 scores_full <- read.csv(
   "C:\\Users\\swils\\Downloads\\01 Projects\\2024 CRP\\Landusesurveygithub\\managementoflandusesurvey2024\\soil_health_scores_2024_all_types.csv",
   stringsAsFactors = FALSE
 )
 
-# farm_name -> lab-data Farmer name (RG/CRP rows only; Conventional/SH
-# Farmer values in the CSV are already correct)
 rg_crp_farmer_map <- c(
   "5G_Farms"           = "5G_Farms_LLC",
   "Cliff"              = "Cliff",
@@ -248,15 +239,15 @@ scores_full <- scores_full %>%
                   crp_type_map[farm_name],
                   Type)
   )
-
+scores_full <- scores_full %>%
+  mutate(Type = recode(Type,
+                       "CRP_New" = "New_CRP",
+                       "CRP_Old" = "Old_CRP"))
 cat("Corrected Farmer/Type for RG/CRP rows:\n")
 print(scores_full %>% filter(Type %in% c("Rotational_Grazing","Old_CRP","New_CRP")) %>%
         dplyr::select(farm_name, Farmer, Type))
 
-# ---- Join management score onto the ACE data -------------------------------
-# drace24 is already at the UID level (no rep-averaging needed here) --
-# Farmer/Type are coerced to character before the join to avoid the
-# factor/integer-coercion trap that broke an earlier join in this project.
+# Join management score onto the ACE data
 
 drace24_indexed <- drace24 %>%
   mutate(Farmer = as.character(Farmer), Type = as.character(Type)) %>%
@@ -268,7 +259,7 @@ drace24_indexed <- drace24 %>%
 cat("\nRows with missing soil_health_score after join:",
     sum(is.na(drace24_indexed$soil_health_score)), "\n")
 
-# ---- Mixed model with continuous management score -------------------------
+# Mixed model with continuous management score
 
 model_ACE_idx     <- lmer(Avg_runs      ~ soil_health_score + (1 | Field), data = drace24_indexed)
 model_ACE_idx_log <- lmer(log(Avg_runs) ~ soil_health_score + (1 | Field), data = drace24_indexed)
@@ -286,7 +277,7 @@ summary(final_model_idx)
 anova_ACE_idx <- anova(final_model_idx)
 print(anova_ACE_idx)
 
-# ---- Visual diagnostic: QQ plot for the selected model --------------------
+#  Visual diagnostic: QQ plot for the selected model 
 par(mfrow = c(1, 2))
 qqnorm(residuals(final_model_idx), main = "QQ Plot: Indexed ACE Model")
 qqline(residuals(final_model_idx), col = "red", lwd = 2)
@@ -296,7 +287,7 @@ plot(fitted(final_model_idx), residuals(final_model_idx),
 abline(h = 0, col = "red", lwd = 2)
 par(mfrow = c(1, 1))
 
-# ---- Plot: scatter + fitted line -------------------------------------------
+# Plot: scatter + fitted line
 
 fixed_est   <- summary(final_model_idx)$coefficients["soil_health_score", "Estimate"]
 fixed_p     <- anova_ACE_idx$`Pr(>F)`[1]
@@ -354,9 +345,7 @@ ACE_meta_indexed <- data.frame(
 write.csv(ACE_meta_indexed, "ACE_metadata_indexed.csv", row.names = FALSE)
 cat("Saved ACE_metadata_indexed.csv\n")
 
-# =========================================================================
 # PART 5 — Field-averaged scatter (n=31, simple lm, ordinary R^2)
-# =========================================================================
 
 ace_field_avg <- drace24_indexed %>%
   group_by(Farmer, Type, County, soil_health_score) %>%
